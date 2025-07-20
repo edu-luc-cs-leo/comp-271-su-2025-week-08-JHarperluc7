@@ -56,6 +56,10 @@ public class HashTable<E extends Comparable<E>> {
      * @param content E The content of a new node, to be placed in the array.
      */
     public void add(E content) {
+        // Check load factor before adding a new node 
+        if ((double) this.usage / this.underlying.length >= LOAD_FACTOR_THRESHOLD) { //ADDED
+            rehash(); // triggers rehash if threshold exceeded
+        } 
         // Create the new node to add to the hashtable
         Node<E> newNode = new Node<E>(content);
         // Use the hashcode for the new node's contents to find where to place it in the
@@ -76,6 +80,7 @@ public class HashTable<E extends Comparable<E>> {
         }
         // Update the number of nodes
         this.totalNodes += 1;
+        this.loadFactor = (double) this.usage / this.underlying.length; //update load factor
     } // method add
 
     /**
@@ -84,14 +89,47 @@ public class HashTable<E extends Comparable<E>> {
      * corresponding linked list can be obtained immediately through the target's
      * hashcode. The linked list must then be traversed to determine if a node with
      * similar content and the target value is present or not.
-     * 
-     * @param target E value to searc for
-     * @return true if target value is present in one of the linked lists of the
-     *         underlying array; false otherwise.
-     */
+    */
+    // Rehash method to double the array and redistribute all nodes //ADDED
+    private void rehash() { 
+        Node<E>[] oldArray = this.underlying; 
+        @SuppressWarnings("unchecked")
+Node<E>[] newArray = (Node<E>[]) new Node[oldArray.length * 2];
+; 
+
+        int newUsage = 0; 
+        for (int i = 0; i < oldArray.length; i++) { 
+            Node<E> current = oldArray[i]; 
+            while (current != null) { 
+                Node<E> next = current.getNext(); 
+                int newPos = Math.abs(current.getContent().hashCode()) % newArray.length; //ADDED
+
+                current.setNext(newArray[newPos]); 
+                if (newArray[newPos] == null) newUsage++; 
+                newArray[newPos] = current; 
+
+                current = next; 
+            } 
+        } 
+
+        this.underlying = newArray; 
+        this.usage = newUsage; 
+        this.loadFactor = (double) this.usage / this.underlying.length; 
+        // totalNodes remains unchanged 
+    } //ADDED
+
     public boolean contains(E target) {
-        return false;
-    } // method contains
+        int position = Math.abs(target.hashCode()) % this.underlying.length;  // Get hash index
+        Node<E> cursor = this.underlying[position];  // Start at linked list head
+        while (cursor != null) { 
+            if (target.equals(cursor.getContent())) {  // Use equals for object comparison
+                return true; 
+            } 
+            cursor = cursor.getNext(); 
+        } 
+        return false; 
+    }
+
 
     /** Constants for toString */
     private static final String LINKED_LIST_HEADER = "\n[ %2d ]: ";
